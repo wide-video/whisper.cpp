@@ -4492,23 +4492,32 @@ WHISPER_API int whisper_bench_ggml_mul_mat(int n_threads) {
     // when F16 is used, there is an extra work buffer of size N*N*sizeof(float)
     std::vector<char> buf(4llu*N_max*N_max*sizeof(float) + 4*256);
 
+    // put a bunch of random data in the buffer
     for (size_t i = 0; i < buf.size(); i++) buf[i] = i;
 
     for (int j = 0; j < (int) sizes.size(); j++) {
+        int n_q4_0 = 0;
+        int n_q4_1 = 0;
         int n_fp16 = 0;
         int n_fp32 = 0;
 
         // GFLOPS/s
+        double s_q4_0 = 0.0;
+        double s_q4_1 = 0.0;
         double s_fp16 = 0.0;
         double s_fp32 = 0.0;
 
         const size_t N = sizes[j];
 
-        for (int k = 0; k < 2; ++k) {
-            const ggml_type wtype = k == 0 ? GGML_TYPE_F16 : GGML_TYPE_F32;
+        for (int k = 0; k < 4; ++k) {
+            const ggml_type wtype =
+                k == 0 ? GGML_TYPE_Q4_0 :
+                k == 1 ? GGML_TYPE_Q4_1 :
+                k == 2 ? GGML_TYPE_F16  :
+                         GGML_TYPE_F32;
 
-            double & s = k == 0 ? s_fp16 : s_fp32;
-            int    & n = k == 0 ? n_fp16   : n_fp32;
+            double & s = k == 0 ? s_q4_0 : k == 1 ? s_q4_1 : k == 2 ? s_fp16 : s_fp32;
+            int    & n = k == 0 ? n_q4_0 : k == 1 ? n_q4_1 : k == 2 ? n_fp16 : n_fp32;
 
             struct ggml_init_params gparams = {
                 /*.mem_size   =*/ buf.size(),
@@ -4551,8 +4560,8 @@ WHISPER_API int whisper_bench_ggml_mul_mat(int n_threads) {
             s = ((2.0*N*N*N*n)/tsum)*1e-9;
         }
 
-        fprintf(stderr, "ggml_mul_mat: %5zu x %5zu: F16 %8.1f GFLOPS (%3d runs) / F32 %8.1f GFLOPS (%3d runs)\n",
-            N, N, s_fp16, n_fp16, s_fp32, n_fp32);
+        fprintf(stderr, "ggml_mul_mat: %4zu x %4zu: Q4_0 %7.1f GFLOPS (%3d runs) / Q4_1 %7.1f GFLOPS (%3d runs) / F16 %7.1f GFLOPS (%3d runs) / F32 %7.1f GFLOPS (%3d runs)\n",
+                N, N, s_q4_0, n_q4_0, s_q4_1, n_q4_1, s_fp16, n_fp16, s_fp32, n_fp32);
     }
 
     return 0;
