@@ -24,7 +24,7 @@ endif()
 if (EMSCRIPTEN)
     set(BUILD_SHARED_LIBS_DEFAULT OFF)
 
-    option(WHISPER_WASM_SINGLE_FILE "whisper: embed WASM inside the generated whisper.js" ON)
+    option(WHISPER_WASM_SINGLE_FILE "whisper: embed WASM inside the generated whisper.js" OFF)
 else()
     if (MINGW)
         set(BUILD_SHARED_LIBS_DEFAULT OFF)
